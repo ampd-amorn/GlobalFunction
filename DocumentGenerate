@@ -1,0 +1,83 @@
+     public string NUMBER_GENERATING(string DOC_TP, string DOC_YEAR, MySqlConnection SQLConn, MySqlTransaction SQLTran)
+        {
+            try
+            {
+                string str;
+                if (DOC_TP != "")
+                {
+                    str = " SELECT * FROM VDOC_MASTERDATA WHERE (DDF_ID LIKE '" + DOC_TP + "') " +
+                        " AND DOC_YEAR LIKE '%" + DOC_YEAR + "%' ";
+                }
+                else
+                {
+                    str = " SELECT * " +
+                      " FROM VDOC_MASTERDATA " +
+                      " WHERE DOC_YEAR LIKE '%" + DOC_YEAR + "%' ";
+                }
+
+
+                MySqlCommand cmd = new MySqlCommand(str, SQLConn, SQLTran);
+                DataTable dt = new DataTable();
+                MySqlDataAdapter adp = new MySqlDataAdapter(cmd);
+                adp.Fill(dt);
+
+
+                double curID = Convert.ToDouble(dt.Rows[0]["DOC_CURRENT"]);
+
+                if (dt.Rows[0]["DOC_RESETFM"].ToString() == "Y" && dt.Rows[0]["DOC_CUR_YEAR"].ToString() != dt.Rows[0]["CUR_YEAR"].ToString())
+                {
+                    curID = 0;
+                }
+                else if (dt.Rows[0]["DOC_RESETFM"].ToString() == "M" && dt.Rows[0]["DOC_CUR_MONTH"].ToString() != dt.Rows[0]["CUR_MONTH"].ToString())
+                {
+                    curID = 0;
+                }
+                else if (dt.Rows[0]["DOC_RESETFM"].ToString() == "D" && dt.Rows[0]["DOC_CUR_DAY"].ToString() != dt.Rows[0]["CUR_DAY"].ToString())
+                {
+                    curID = 0;
+                }
+            
+
+                String newID = dt.Rows[0]["DOC_PFIX"].ToString();
+            if (dt.Rows[0]["DOC_PFM"].ToString().IndexOf("yy", 0) > 0)
+            { newID += dt.Rows[0]["CUR_YEAR"].ToString().Substring(2, 2); }
+            if (dt.Rows[0]["DOC_PFM"].ToString().IndexOf("MM", 0) > 0)
+            { newID += Convert.ToInt16(dt.Rows[0]["CUR_MONTH"]).ToString("00"); }
+            if (dt.Rows[0]["DOC_PFM"].ToString().IndexOf("dd", 0) > 0)
+            { newID += Convert.ToInt16(dt.Rows[0]["CUR_DAY"]).ToString("00"); }
+
+            newID += (Convert.ToDouble(curID) + 1).ToString(dt.Rows[0]["DOC_FORMAT"].ToString());
+
+            if (dt.Rows[0]["DOC_SFM"].ToString().IndexOf("yy", 0) > 0)
+            { newID += dt.Rows[0]["CUR_YEAR"].ToString().Substring(2, 2); }
+            if (dt.Rows[0]["DOC_SFM"].ToString().IndexOf("MM", 0) > 0)
+            { newID += Convert.ToInt16(dt.Rows[0]["CUR_MONTH"]).ToString("00"); }
+            if (dt.Rows[0]["DOC_SFM"].ToString().IndexOf("dd", 0) > 0)
+            { newID += Convert.ToInt16(dt.Rows[0]["CUR_DAY"]).ToString("00"); }
+
+            Double maxID = Convert.ToDouble(dt.Rows[0]["DOC_END"]);
+
+            if (curID > maxID)
+            {
+                throw new Exception("Document has ending ! cannot created");
+            }
+
+            str = " UPDATE DOCU_CODE SET DOC_CUR_YEAR= '" + dt.Rows[0]["CUR_YEAR"] + "', " +
+                " DOC_CUR_MONTH = '" + dt.Rows[0]["CUR_MONTH"] + "', " +
+                " DOC_CUR_DAY = '" + dt.Rows[0]["CUR_DAY"] + "', " +
+                " DOC_CURRENT = '" + (Convert.ToDouble(curID) + 1).ToString(dt.Rows[0]["DOC_FORMAT"].ToString()) +
+                "' WHERE DOC_NUM = '" + dt.Rows[0]["DOC_NUM"] + "'  AND ISTAT = '1' ";
+
+            if (new MySqlCommand(str, SQLConn, SQLTran).ExecuteNonQuery() <= 0)
+            {
+                return "";
+            }
+
+            return newID;
+
+        }
+            catch (Exception)
+            {
+                throw;
+            }
+}
